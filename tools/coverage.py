@@ -1,0 +1,400 @@
+"""학습 범위 커버리지 검사기.
+
+수업 PDF 4개의 슬라이드에서 뽑은 주제 목록(TOPICS)을 콘텐츠와 대조해서
+각 주제가 ① 배우기 카드에 설명되어 있는지 ② 문제로 한 번 이상 출제되는지 확인한다.
+사용: python3 tools/coverage.py   (빠진 주제가 있으면 종료 코드 1)
+"""
+import json
+import os
+import subprocess
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+
+# (강의, 슬라이드 주제, 콘텐츠에서 찾을 문자열 후보들 — 하나라도 있으면 통과)
+TOPICS = [
+    # ── 1강: 파이썬 개요와 개발환경
+    ('1강', '프로그래밍 언어 = 프로그램 작성 도구', ['프로그래밍 언어']),
+    ('1강', '컴파일 언어: 일괄 번역', ['일괄 번역']),
+    ('1강', '컴파일 단계 코딩·컴파일·실행·디버깅', ['디버깅']),
+    ('1강', '인터프리터 언어: 즉시 번역', ['즉시 번역']),
+    ('1강', '1990년 귀도 반 로섬', ['귀도 반 로섬']),
+    ('1강', '오픈 소스', ['오픈 소스']),
+    ('1강', 'GUI (tkinter)', ['tkinter']),
+    ('1강', '웹 프로그래밍', ['웹 프로그래밍', '웹 프로그램']),
+    ('1강', '수치 연산 numpy', ['수치 연산']),
+    ('1강', '데이터베이스 오라클·MySQL', ['MySQL']),
+    ('1강', '피클(pickle)', ['pickle']),
+    ('1강', '데이터 분석·시각화', ['빅데이터', '데이터 분석']),
+    ('1강', 'python.org 설치', ['python.org']),
+    ('1강', 'Colab 웹브라우저·구글 드라이브', ['구글 드라이브']),
+    ('1강', 'Colab 기본 패키지 (TensorFlow, Keras, scikit-learn)', ['scikit-learn']),
+    ('1강', 'CPU vs GPU', ['GPU']),
+    ('1강', 'ALU', ['ALU']),
+    # ── 1강: 파이썬 구조와 데이터 처리
+    ('1강', '한 줄에 하나의 명령 / 세미콜론', ['세미콜론']),
+    ('1강', '대소문자 구분', ['대소문자']),
+    ('1강', '들여쓰기 Tab 또는 4개 공백', ['공백 4']),
+    ('1강', '>>> 프롬프트 첫 칸부터 입력', ['>>>']),
+    ('1강', '콜론과 들여쓰기로 블록 지정', ['콜론']),
+    ('1강', '# 주석', ['주석']),
+    ('1강', 'print sep', ['sep=']),
+    ('1강', 'print end', ['end=']),
+    ('1강', 'input', ['input(']),
+    ('1강', 'int() / str() 변환', ['str(int(']),
+    ('1강', '변수 = 메모리에 이름 붙이기', ['메모리']),
+    ('1강', '명칭 규칙 (키워드·내장함수 불가, 밑줄)', ['키워드']),
+    ('1강', '동적 타입', ['동적 타입']),
+    ('1강', 'del로 변수 삭제', ['`del`']),
+    ('1강', '16진법 0x', ['0x']),
+    ('1강', '8진법 0o', ['0o']),
+    ('1강', '2진법 0b', ['0b']),
+    ('1강', '실수 가수E지수', ['9.46e12']),
+    ('1강', '복소수 j', ['1 + 2j', '1+2j']),
+    ('1강', '따옴표 안의 따옴표', ['I Say']),
+    ('1강', '확장열 \\n', ['\\n']),
+    ('1강', '확장열 \\t', ['\\t']),
+    ('1강', '긴 문자열 따옴표 3개', ['"""']),
+    ('1강', '계속문자 \\', ['31536000']),
+    ('1강', '괄호로 문자열 잇기', ['koreajapan2002']),
+    ('1강', '첨자 s[-2]', ['s[-2]']),
+    ('1강', '슬라이스 s[3:]', ['s[3:]']),
+    ('1강', '슬라이스 s[2:-2]', ['s[2:-2]']),
+    ('1강', 'len', ['len(s)']),
+    ('1강', 'count', ['s.count(']),
+    ('1강', 'find', ['s.find(']),
+    ('1강', 'rfind', ['rfind(']),
+    ('1강', 'index(값, 시작)', ['index("n", 6)']),
+    ('1강', 'not in', ['not in']),
+    ('1강', 'lstrip / rstrip', ['lstrip']),
+    ('1강', 'strip', ['strip()']),
+    ('1강', 'split()', ['split()']),
+    ('1강', 'split("pro")', ['split("pro")']),
+    # ── 1강: 연산자
+    ('1강', '대입 연산자 변수 = 수식', ['변수 = 수식']),
+    ('1강', '** 거듭제곱', ['**']),
+    ('1강', '// 정수 나누기', ['//']),
+    ('1강', '% 나머지', ['%']),
+    ('1강', '+= 복합 대입', ['+=']),
+    ('1강', '-= 복합 대입', ['-=']),
+    ('1강', '*= 복합 대입', ['*=']),
+    ('1강', '문자열 * 반복', ['"싫어 " *']),
+    ('1강', '문자열 + 숫자 에러, str(2002)', ['str(2002)']),
+    ('1강', 'int("22")', ['int("22")']),
+    ('1강', 'float("22.5")', ['float("22.5")']),
+    ('1강', 'float("314e-2")', ['314e-2']),
+    ('1강', 'int(float(...))', ['int(float(']),
+    ('1강', 'round', ['round(']),
+    # ── 1강: 조건문
+    ('1강', 'if 조건문', ['if age < 19']),
+    ('1강', '비교 연산자 !=', ['!=']),
+    ('1강', '>= <=', ['>=']),
+    ('1강', '문자열 비교 "39" > "59 "', ['"39" > "59 "']),
+    ('1강', '값 자체를 조건으로 (0, 빈 문자열)', ['value = -1']),
+    ('1강', 'and', [' and ']),
+    ('1강', 'or', [' or ']),
+    ('1강', 'not', ['not True', 'not a']),
+    ('1강', '블록 구조', ['블록']),
+    ('1강', 'else', ['else:']),
+    ('1강', 'elif', ['elif']),
+    # ── 1강: 반복문
+    ('1강', 'while', ['while ']),
+    ('1강', '루프(Loop)', ['루프']),
+    ('1강', 'for', ['for ']),
+    ('1강', 'range(시작, 끝)', ['range(1, 101)']),
+    ('1강', '제어 변수와 % 판별 (자 그리기)', ['% 10 == 0', '% 5 == 0']),
+    ('1강', 'break', ['break']),
+    ('1강', 'continue', ['continue']),
+    ('1강', '이중 루프 (구구단)', ['hang']),
+    ('1강', '범위의 원칙', ['범위의 원칙']),
+    ('1강', '오프셋', ['오프셋']),
+    # ── 2강: 함수
+    ('2강', 'def 함수 정의', ['def ']),
+    ('2강', 'return', ['return']),
+    ('2강', 'range 인수 1개', ['range(5)']),
+    ('2강', 'range 인수 2개', ['range(5, 10)']),
+    ('2강', 'range 인수 3개', ['range(1, 10, 3)']),
+    ('2강', '인수', ['인수']),
+    ('2강', '매개변수', ['매개변수']),
+    ('2강', '리턴값', ['리턴값']),
+    ('2강', '가변 인수 *', ['*ints']),
+    ('2강', '인수 기본값', ['step=1']),
+    ('2강', '키워드 인수', ['키워드 인수']),
+    ('2강', '지역 변수', ['지역 변수']),
+    ('2강', '전역 변수', ['전역 변수']),
+    # ── 2강: 리스트와 튜플
+    ('2강', '리스트 요소', ['요소']),
+    ('2강', 'score[-1]', ['score[-1]']),
+    ('2강', 'nums[1:7:2]', ['nums[1:7:2]']),
+    ('2강', '이중 리스트', ['lol[2][1]']),
+    ('2강', 'append', ['append(']),
+    ('2강', 'insert', ['insert(']),
+    ('2강', '범위 삽입 nums[2:2]', ['nums[2:2]']),
+    ('2강', '대체 nums[2] = [...]', ['nums[2] = [90']),
+    ('2강', 'remove', ['remove(']),
+    ('2강', 'del 리스트[i]', ['del(score[2])', 'del score[2]']),
+    ('2강', 'clear', ['clear()']),
+    ('2강', '빈 리스트 대입 범위 삭제', ['= []']),
+    ('2강', 'index', ['.index(100)']),
+    ('2강', 'count', ['.count(100)']),
+    ('2강', 'min / max', ['max(']),
+    ('2강', 'sort', ['sort()']),
+    ('2강', 'reverse', ['reverse()']),
+    ('2강', '튜플 불변', ['item assignment']),
+    ('2강', '요소 하나 튜플 (5,)', ['(5,)']),
+    ('2강', '튜플 + / *', ['tu + (6, 7)']),
+    ('2강', '튜플 언패킹', ['lee, kim, kang']),
+    ('2강', '두 개 이상 값 반환', ['return 3, 4', 'tm_hour']),
+    # ── 2강: 사전과 집합
+    ('2강', '사전 {키:값}', ["'boy':'소년'"]),
+    ('2강', 'KeyError', ['KeyError']),
+    ('2강', 'get 메서드', ['.get(']),
+    ('2강', '사전 수정·추가', ["dic['girl']"]),
+    ('2강', 'del 사전[키]', ["del dic["]),
+    ('2강', 'keys', ['keys()']),
+    ('2강', 'values', ['values()']),
+    ('2강', 'items', ['items()']),
+    ('2강', '집합 중복 제거', ["'korea', 'china', 'japan', 'korea'"]),
+    ('2강', 'set()', ['set()']),
+    ('2강', 'add', ['.add(']),
+    ('2강', 'update', ['update(']),
+    ('2강', '합집합 |', ['twox | threex', '|']),
+    ('2강', '교집합 &', ['&']),
+    ('2강', '차집합 -', ['twox - threex']),
+    ('2강', '배타적 차집합 ^', ['^']),
+    ('2강', '부분집합 <= issubset', ['issubset']),
+    ('2강', '진성 부분집합 <', ['진성 부분집합']),
+    ('2강', '포함집합 >= issuperset', ['issuperset']),
+    ('2강', 'union/intersection/difference 메서드', ['intersection']),
+    # ── 2강: 컬렉션 관리
+    ('2강', 'zip', ['zip(']),
+    ('2강', 'filter', ['filter(']),
+    ('2강', 'map', ['map(']),
+    ('2강', 'lambda', ['lambda']),
+    ('2강', '대입은 같은 리스트', ['list2 = list1\n']),
+    ('2강', 'copy()', ['.copy()']),
+    ('2강', 'list[:] 사본', ['[:]']),
+    ('2강', 'deepcopy', ['deepcopy']),
+    ('2강', 'is 연산자', [' is ']),
+    # ── 3강: 표준 모듈
+    ('3강', 'import', ['import math']),
+    ('3강', 'math.sqrt', ['sqrt(']),
+    ('3강', 'pi / tau', ['tau']),
+    ('3강', 'e / inf / nan', ['nan']),
+    ('3강', 'pow', ['pow(']),
+    ('3강', 'hypot', ['hypot(']),
+    ('3강', 'factorial', ['factorial(']),
+    ('3강', 'sin / cos / tan', ['sin']),
+    ('3강', 'degrees / radians', ['radians']),
+    ('3강', 'ceil', ['ceil(']),
+    ('3강', 'floor', ['floor(']),
+    ('3강', 'fabs', ['fabs']),
+    ('3강', 'trunc', ['trunc(']),
+    ('3강', 'log / log10', ['log10']),
+    ('3강', 'gcd', ['gcd(']),
+    ('3강', 'from 모듈 import 함수', ['from math import sqrt']),
+    ('3강', 'from 모듈 import *', ['from math import *']),
+    ('3강', 'time.time / 에폭', ['에폭']),
+    ('3강', 'ctime', ['ctime']),
+    ('3강', '경과 시간 측정', ['end - start']),
+    ('3강', 'calendar.calendar / month', ['calendar.month']),
+    ('3강', 'weekday', ['weekday']),
+    ('3강', 'random.random', ['random.random()']),
+    ('3강', 'randint', ['random.randint']),
+    ('3강', 'shuffle', ['shuffle']),
+    # ── 3강: 파일
+    ('3강', 'open 파일 객체', ['open(']),
+    ('3강', '모드 r', ['"r"']),
+    ('3강', '모드 w', ['"w"']),
+    ('3강', '모드 a', ['"a"']),
+    ('3강', '모드 x', ['"x"', '`x`']),
+    ('3강', '모드 t', ['"rt"', '"wt"']),
+    ('3강', 'close', ['close()']),
+    ('3강', 'read', ['.read()']),
+    ('3강', 'FileNotFoundError / try / finally', ['finally']),
+    ('3강', 'readline', ['readline']),
+    ('3강', 'shutil.copy', ['shutil.copy']),
+    ('3강', 'shutil.copytree', ['copytree']),
+    ('3강', 'shutil.move', ['shutil.move']),
+    ('3강', 'shutil.rmtree', ['rmtree']),
+    ('3강', 'os.rename', ['os.rename']),
+    ('3강', 'os.remove', ['os.remove']),
+    ('3강', 'os.chmod', ['chmod']),
+    ('3강', 'shutil.chown', ['chown']),
+    ('3강', 'os.link / symlink', ['symlink']),
+    ('3강', 'os.chdir', ['chdir']),
+    ('3강', 'os.mkdir', ['mkdir']),
+    ('3강', 'os.rmdir', ['rmdir']),
+    ('3강', 'os.getcwd', ['getcwd']),
+    ('3강', 'os.listdir', ['listdir']),
+    ('3강', 'glob.glob', ['glob.glob']),
+    ('3강', 'os.path.isabs / abspath', ['abspath']),
+    ('3강', 'os.path.realpath', ['realpath']),
+    ('3강', 'os.path.exists', ['exists']),
+    ('3강', 'os.path.isfile / isdir', ['isdir']),
+    # ── 3강: 데이터베이스
+    ('3강', 'SQLite DBMS 무료', ['DBMS']),
+    ('3강', 'connect', ['connect']),
+    ('3강', 'cursor', ['cursor']),
+    ('3강', 'execute', ['execute']),
+    ('3강', 'CREATE TABLE', ['CREATE TABLE']),
+    ('3강', 'INSERT', ['INSERT']),
+    ('3강', 'commit', ['commit']),
+    ('3강', 'SELECT', ['SELECT']),
+    ('3강', 'fetchall', ['fetchall']),
+    ('3강', 'fetchone', ['fetchone']),
+    ('3강', 'UPDATE ... WHERE', ['UPDATE']),
+    ('3강', 'DELETE', ['DELETE']),
+    # ── 3강: 클래스
+    ('3강', '모델링', ['모델링']),
+    ('3강', '캡슐화', ['캡슐화']),
+    ('3강', '멤버', ['멤버']),
+    ('3강', '메서드', ['메서드']),
+    ('3강', '생성자 __init__', ['__init__']),
+    ('3강', 'self', ['self']),
+    ('3강', '상속 class 이름(부모)', ['class Student(Human)']),
+    ('3강', 'super()', ['super()']),
+    ('3강', '__eq__', ['__eq__']),
+    ('3강', '__ne__', ['__ne__']),
+    ('3강', '__lt__ / __gt__', ['__gt__']),
+    ('3강', '__le__ / __ge__', ['__ge__']),
+    ('3강', '__add__ / __sub__ / __mul__', ['__sub__']),
+    ('3강', '__div__ (__truediv__)', ['__div__', '__truediv__']),
+    ('3강', '__floordiv__ / __mod__ / __pow__', ['__floordiv__']),
+    ('3강', '우변 메서드 __r...__', ['__rfloordiv__', '__radd__', '__rmod__']),
+    ('3강', '__lshift__ / __rshift__', ['__rshift__']),
+    ('3강', '__str__', ['__str__']),
+    ('3강', '__repr__', ['__repr__']),
+    ('3강', '__len__', ['__len__']),
+    ('3강', 'Fraction', ['Fraction(']),
+    # ── 3강: 모듈과 패키지
+    ('3강', '모듈 = .py 파일, .py 빼고 import', ['import util']),
+    ('3강', '모듈 경로 sys.path', ['sys.path']),
+    ('3강', 'ModuleNotFoundError', ['ModuleNotFoundError']),
+    ('3강', '패키지 = 모듈 담는 디렉토리', ['mypack']),
+    ('3강', 'from 패키지 import 모듈', ['from mypack.calc import add']),
+    ('3강', '__init__.py', ['__init__.py']),
+    ('3강', '__all__', ['__all__']),
+    ('3강', 'dir 내장 함수', ['dir(']),
+    ('3강', 'pip install', ['pip install']),
+    ('3강', 'pip uninstall', ['uninstall']),
+    ('3강', 'pip freeze', ['freeze']),
+    ('3강', 'pip show', ['`show`']),
+    ('3강', 'pip search (PyPI)', ['`search`', 'search']),
+    # ── 4강: NumPy
+    ('4강', 'Numerical Python', ['Numerical Python']),
+    ('4강', '벡터 및 행렬 연산', ['행렬']),
+    ('4강', 'pandas·matplotlib의 기반', ['기반']),
+    ('4강', 'pip install numpy', ['pip install numpy']),
+    ('4강', 'import numpy as np', ['import numpy as np']),
+    ('4강', 'np.array', ['np.array(']),
+    ('4강', 'ndim', ['ndim']),
+    ('4강', 'shape', ['shape']),
+    ('4강', 'size', ['.size']),
+    ('4강', '2차원 배열 (3, 4)', ['(3, 4)']),
+    ('4강', '3차원 배열 (2, 3, 4)', ['(2, 3, 4)']),
+    ('4강', 'arange', ['arange(']),
+    ('4강', 'zeros', ['zeros(']),
+    ('4강', 'ones', ['ones(']),
+    ('4강', 'random.rand', ['random.rand(']),
+    ('4강', 'random.normal', ['random.normal(']),
+    ('4강', 'np.random.randint', ['np.random.randint(']),
+    ('4강', 'reshape', ['reshape(']),
+    # ── 4강: pandas
+    ('4강', '데이터 조작 및 분석, R 모티브', ['R을 모티브']),
+    ('4강', 'pip install pandas / import pandas as pd', ['import pandas as pd']),
+    ('4강', 'Series 1차원', ['Series']),
+    ('4강', 'Series ← 딕셔너리', ['pd.Series({', 'pd.Series(a)']),
+    ('4강', 'Series ← 튜플', ['("string", 100, True)', "('string', 100, True)"]),
+    ('4강', 'Series index= 지정', ['index=["문자열"']),
+    ('4강', 'dtype', ['dtype']),
+    ('4강', 'DataFrame 2차원', ['DataFrame']),
+    ('4강', 'DataFrame columns=', ['columns=']),
+    ('4강', 'rename', ['rename(']),
+    ('4강', 'drop axis=0 (행)', ['axis=0']),
+    ('4강', 'drop axis=1 (열)', ['axis=1']),
+    ('4강', 'inplace=True', ['inplace']),
+    ('4강', 'loc (이름, 끝 포함)', ['loc[']),
+    ('4강', 'iloc (위치, 끝 제외)', ['iloc[']),
+    ('4강', 'df["열"] 선택', ['df["타입A"]']),
+    ('4강', 'iloc[[0, 2], [0, 1]]', ['iloc[[0, 2], [0, 1]]']),
+    ('4강', '열 추가', ['df["타입D"] = 0']),
+    ('4강', '행 추가', ['df.loc["P4"] = ']),
+    ('4강', '값 변경 loc[행, 열]', ['df.loc["P4", "타입A"] = 100']),
+    ('4강', 'count', ['`count`']),
+    ('4강', 'argmin / argmax', ['argmax']),
+    ('4강', 'idxmin / idxmax', ['idxmax']),
+    ('4강', 'quantile', ['quantile']),
+    ('4강', 'mean', ['mean']),
+    ('4강', 'median', ['median']),
+    ('4강', 'mad', ['mad']),
+    ('4강', 'std / var', ['var']),
+    ('4강', 'sum(axis=1) 행 방향 합', ['sum(axis=1)']),
+    ('4강', 'sum(axis=0) 열 방향 합', ['sum(axis=0)']),
+    ('4강', '열끼리 사칙연산', ['df["A-B"]']),
+    ('4강', 'read_csv', ['read_csv']),
+    ('4강', 'index_col / header', ['header=0']),
+    ('4강', 'encoding euc-kr', ['euc-kr']),
+    ('4강', 'to_csv', ['to_csv']),
+    # ── 4강: matplotlib
+    ('4강', '데이터 시각화 라이브러리', ['시각화']),
+    ('4강', 'python -m pip install -U matplotlib', ['-U matplotlib']),
+    ('4강', 'import matplotlib.pyplot as plt', ['import matplotlib.pyplot as plt']),
+    ('4강', 'plot(데이터) x축은 인덱스', ['plt.plot([10, 20, 30, 40])']),
+    ('4강', 'plot(x, y)', ['plt.plot([10, 20, 30, 40], [10, 20, 30, 40])', 'plot(x, y)']),
+    ('4강', 'show', ['plt.show()']),
+    ('4강', 'title', ['plt.title(']),
+    ('4강', 'label', ['label=']),
+    ('4강', 'legend', ['legend()']),
+    ('4강', '포맷 문자열 bo:', ['"bo:"']),
+    ('4강', '포맷 문자열 rv--', ['"rv--"']),
+    ('4강', '색 c·m·y·k', ['`k`', '검정']),
+    ('4강', '마커 ^ s', ['위 삼각형']),
+    ('4강', '선 -.', ['-.']),
+]
+
+
+def text_of(obj):
+    out = []
+
+    def walk(x):
+        if isinstance(x, str):
+            out.append(x)
+        elif isinstance(x, list):
+            for y in x:
+                walk(y)
+        elif isinstance(x, dict):
+            for k, v in x.items():
+                if k not in ('id', 'type', 'num'):
+                    walk(v)
+    walk(obj)
+    return '\n'.join(out)
+
+
+def main():
+    worlds = json.loads(subprocess.run(['node', os.path.join(HERE, 'export_content.js')], capture_output=True, text=True, check=True).stdout)
+    by_lecture = {}
+    for w in worlds:
+        lessons = '\n'.join(text_of(s.get('lessons', [])) + '\n' + text_of(s.get('summary', [])) for s in w['stages'])
+        quiz = '\n'.join(text_of(s.get('quiz', [])) for s in w['stages'])
+        by_lecture[w['lecture']] = (lessons, quiz)
+    missing_l, missing_q = [], []
+    for lec, topic, keys in TOPICS:
+        lessons, quiz = by_lecture[lec]
+        if not any(k in lessons for k in keys):
+            missing_l.append((lec, topic))
+        if not any(k in quiz for k in keys):
+            missing_q.append((lec, topic))
+    n = len(TOPICS)
+    print(f'슬라이드 주제 {n}개')
+    print(f'  배우기 카드에 설명됨: {n - len(missing_l)}/{n}')
+    print(f'  문제로 출제됨:        {n - len(missing_q)}/{n}')
+    for lec, t in missing_l:
+        print(f'  ✗ 배우기 누락 [{lec}] {t}')
+    for lec, t in missing_q:
+        print(f'  △ 문제 누락   [{lec}] {t}')
+    sys.exit(1 if missing_l or missing_q else 0)
+
+
+if __name__ == '__main__':
+    main()

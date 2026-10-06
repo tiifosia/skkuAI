@@ -138,6 +138,9 @@ b = np.array([[0, 1, 2], [3, 4, 5]])
 print(b.ndim, b.size)`, answer: '2 6', explain: '2차원, 원소 6개.' },
         { type: 'blank', q: 'numpy를 np라는 이름으로 불러오세요.', code: `___ numpy ___ np
 a = np.array([1, 2, 3])`, options: ['import', 'as', 'from', 'in'], answer: ['import', 'as'], explain: 'import 모듈 as 별명' },
+        { type: 'mc', q: 'NumPy가 특히 편리한 기능을 제공하는 연산은?', choices: ['벡터 및 행렬 연산', '문자열 암호화', '웹 페이지 디자인', '파일 압축'], answer: 0, explain: 'Numerical Python: 벡터·행렬 연산에 매우 편리해요.' },
+        { type: 'mc', q: 'NumPy를 설치하는 명령은?', choices: ['`pip install numpy`', '`import numpy`', '`pip numpy`', '`install numpy as np`'], answer: 0, explain: '설치는 pip install, 불러오기는 import numpy as np.' },
+        { type: 'mc', q: '`np.random.rand(3)`의 결과로 알맞은 것은?', choices: ['0과 1 사이 무작위 수 3개로 된 1차원 배열', '`[0 1 2]`', '3×3 무작위 행렬', '1부터 3까지의 정수'], answer: 0, explain: 'rand(개수): 0~1 사이 무작위 수로 채운 1차원 배열.' },
       ],
       summary: [
         '**NumPy** = Numerical Python · 벡터·행렬 연산 · pandas·matplotlib의 기반 · **array** 단위 관리',
@@ -187,7 +190,7 @@ print(s)`,
         {
           title: '시리즈: 리스트·튜플로 만들기',
           body: [
-            '리스트나 튜플을 넣으면 인덱스가 **0, 1, 2…로 자동** 붙어요. `index=`로 인덱스 이름을 직접 정할 수도 있어요.',
+            '**리스트나 튜플**을 넣으면 인덱스가 **0, 1, 2…로 자동** 붙어요. `index=`로 인덱스 이름을 직접 정할 수도 있어요.',
             '',
             '여러 타입이 섞이면 dtype은 **object**가 돼요.',
           ],
@@ -197,8 +200,10 @@ a = ["string", 100, True]
 s = pd.Series(a)
 print(s)
 s = pd.Series(a, index=["문자열", "정수값", "참거짓"])
-print(s)`,
-          output: '0    string\n1       100\n2      True\ndtype: object\n문자열    string\n정수값       100\n참거짓      True\ndtype: object',
+print(s)
+t = ("string", 100, True)   # 튜플도 시리즈로
+print(pd.Series(t))`,
+          output: '0    string\n1       100\n2      True\ndtype: object\n문자열    string\n정수값       100\n참거짓      True\ndtype: object\n0    string\n1       100\n2      True\ndtype: object',
         },
         {
           title: '데이터프레임 만들기',
@@ -376,6 +381,40 @@ df = pd.DataFrame(a, index=["P1", "P2", "P3", "P4"])
 print(df.sum(axis=1)["P1"])`, answer: '173', explain: 'P1 행의 합: 90 + 83 = 173' },
         { type: 'blank', q: 'pandas를 불러와 데이터프레임을 만드세요.', code: `___ pandas as pd
 df = pd.___({"A": [1, 2]})`, options: ['import', 'DataFrame', 'Series', 'from', 'array'], answer: ['import', 'DataFrame'], explain: '2차원 표는 DataFrame.' },
+        { type: 'mc', q: 'pandas에 대한 설명으로 옳은 것은?', choices: ['데이터 조작 및 분석 라이브러리로, R을 모티브로 만들었다', '그래프 전용 라이브러리이다', 'C언어를 모티브로 만들었다', '3차원 배열만 지원한다'], answer: 0, explain: '시리즈(1차원)와 데이터프레임(2차원)을 지원해요.' },
+        { type: 'output', code: `import pandas as pd
+s = pd.Series(("string", 100, True))
+print(s[1])`, answer: '100', explain: '튜플도 시리즈로 바꿀 수 있고, 인덱스는 0, 1, 2로 자동으로 붙어요.' },
+        { type: 'output', code: `import pandas as pd
+s = pd.Series(["string", 100, True], index=["문자열", "정수값", "참거짓"])
+print(s["정수값"])`, answer: '100', explain: 'index=로 정한 이름으로 값을 꺼낼 수 있어요.' },
+        { type: 'mc', q: '시리즈 출력의 마지막 줄 `dtype: int64`가 뜻하는 것은?', choices: ['데이터의 자료형이 정수(int64)', '데이터가 64개', '64번째 인덱스', '메모리 64바이트'], answer: 0, explain: '섞인 타입이면 dtype: object가 돼요.' },
+        { type: 'output', code: `import pandas as pd
+df = pd.DataFrame([[1, 100, "A"], [2, 200, "B"]], index=["ABC", "DEF"], columns=["번호", "점수", "반"])
+print(df.loc["DEF", "점수"])`, answer: '200', explain: 'index=는 행 이름, columns=는 열 이름. loc[행, 열]로 값 하나를 꺼내요.' },
+        { type: 'output', code: `import pandas as pd
+df = pd.DataFrame({"점수": [100, 200]})
+df.rename(columns={"점수": "신청"}, inplace=True)
+print(list(df.columns))`, answer: "['신청']", explain: 'rename(columns={옛이름: 새이름}), inplace=True로 원본이 바뀌었어요.' },
+        { type: 'mc', q: '`df.drop(["가나다"], axis=0, inplace=True)`가 하는 일은?', choices: ['"가나다" 행을 원본에서 삭제', '"가나다" 열을 삭제', '"가나다" 행만 남김', '새 df를 반환하고 원본은 그대로'], answer: 0, explain: 'axis=0 → 행, inplace=True → 원본 수정.' },
+        { type: 'mc', q: '`df.iloc[[0, 2], [0, 1]]`이 선택하는 것은?', choices: ['0·2번째 행과 0·1번째 열', '0~2번째 행과 0~1번째 열 전부', '0번째 행, 2번째 열의 값 하나', '[0, 2] 행 하나'], answer: 0, explain: '리스트로 주면 그 위치들만 골라요. [행 목록], [열 목록].' },
+        { type: 'output', code: `import pandas as pd
+df = pd.DataFrame({"타입A": [90, 81]}, index=["P1", "P4"])
+df.loc["P4", "타입A"] = 100
+print(df.loc["P4", "타입A"])`, answer: '100', explain: 'loc[행, 열] = 값 → 값 변경.' },
+        { type: 'output', code: `import pandas as pd
+s = pd.Series([1, 2, 3, 4, 5])
+print(s.quantile(0.5))`, answer: '3.0', explain: 'quantile(0.5)는 50% 사분위수 = 중간값.' },
+        { type: 'match', pairs: [['`mad`', '평균값과의 절대 편차의 평균'], ['`var`', '분산'], ['`quantile`', '특정 사분위수에 해당하는 값'], ['`argmax`', '최댓값의 정수 위치']], explain: '분석 함수 표의 나머지 항목. (mad는 pandas 2.0부터 삭제됐지만 시험엔 표대로)' },
+        { type: 'output', code: `import pandas as pd
+df = pd.DataFrame({"타입A": [90, 89], "타입B": [83, 74]})
+print(df.sum(axis=0)["타입B"])`, answer: '157', explain: 'sum(axis=0) = 열 방향 합: 타입B 열의 83 + 74.' },
+        { type: 'output', code: `import pandas as pd
+df = pd.DataFrame({"타입A": [90, 89], "타입B": [83, 74]})
+df["A-B"] = df["타입A"] - df["타입B"]
+print(list(df["A-B"]))`, answer: '[7, 15]', explain: '열끼리 빼면 같은 행끼리 계산된 새 열이 생겨요.' },
+        { type: 'mc', q: '데이터프레임을 CSV 파일로 저장하는 메서드는?', choices: ['`to_csv`', '`read_csv`', '`save_csv`', '`write`'], answer: 0, explain: 'pd.read_csv로 읽고, df.to_csv로 저장.' },
+        { type: 'mc', q: '`pd.read_csv(..., header=0)`의 의미는?', choices: ['0번째 행을 열 이름으로 사용', '열 이름 없이 읽기', '0번째 열을 행 인덱스로 사용', '0행부터 읽기 시작'], answer: 0, explain: '행 인덱스는 index_col=0.' },
       ],
       summary: [
         '**pandas**: 데이터 조작·분석, R 모티브 · `import pandas as pd` · **Series**(1차원), **DataFrame**(2차원, 여러 시리즈 모음)',
@@ -439,6 +478,8 @@ plt.show()`,
             '- `plt.title("제목")` : 그래프 제목',
             '- `plt.plot(x, y, label="이름")` : 선마다 범례에 표시할 이름',
             '- `plt.legend()` : **범례 표시하기** (label만 줘서는 안 보이고 legend를 불러야 보여요)',
+            '',
+            '수업 자료처럼 `>>>` 대화형 창에서 `plt.title(...)`을 치면 `Text(0.5, 1.0, \'Can you see the title?\')`라는 줄이 나오는데, 제목 글자 객체가 만들어졌다는 표시일 뿐이라 신경 쓰지 않아도 돼요.',
           ],
           code: `import matplotlib.pyplot as plt
 
@@ -461,7 +502,7 @@ plt.show()`,
           table: [
             ['종류', '기호'],
             ['색', '`b` 파랑 · `g` 초록 · `r` 빨강 · `c` 청록 · `m` 자홍 · `y` 노랑 · `k` 검정 · `w` 흰색'],
-            ['마커', '`o` 원 · `v` 아래 삼각형 · `^` 위 삼각형 · `s` 사각형 · `*` 별 · `.` 점'],
+            ['마커', '`.` 점 · `,` 픽셀 · `o` 원 · `v` 아래 삼각형 · `^` 위 삼각형 · `<` 왼쪽 삼각형 · `>` 오른쪽 삼각형 · `1`~`4` 삼각 별(tri) · `s` 사각형 · `*` 별'],
             ['선', '`-` 실선 · `--` 대시선(파선) · `:` 점선 · `-.` 대시-점선'],
           ],
           code: `import matplotlib.pyplot as plt
@@ -491,6 +532,9 @@ plt.legend()`, options: ['label', 'title', 'name', 'legend'], answer: ['label'],
         { type: 'mc', q: 'matplotlib의 주된 용도는?', choices: ['데이터 시각화(그래프 그리기)', '데이터베이스 관리', '웹 서버 만들기', '난수 생성'], answer: 0, explain: '2D 그래프, 이미지.' },
         { type: 'mc', q: '`plt.plot(x, y)`에서 첫 번째 인수는?', choices: ['x축 데이터', 'y축 데이터', '그래프 제목', '선 색상'], answer: 0, explain: 'plot(x축 데이터 셋, y축 데이터 셋)' },
         { type: 'mc', q: '수업에서 소개한 matplotlib 설치 명령은?', choices: ['`python -m pip install -U matplotlib`', '`pip remove matplotlib`', '`import install matplotlib`', '`python matplotlib.py`'], answer: 0, explain: '-U는 최신 버전으로 업그레이드 설치.' },
+        { type: 'match', pairs: [['`c`', '청록(cyan)'], ['`m`', '자홍(magenta)'], ['`y`', '노랑(yellow)'], ['`k`', '검정(black)']], explain: '나머지 색 기호. 검정은 b가 아니라 k예요 (b는 blue).' },
+        { type: 'match', pairs: [['`-`', '실선'], ['`--`', '대시선'], ['`:`', '점선'], ['`-.`', '대시-점선']], explain: '선 모양 기호 4종.' },
+        { type: 'mc', q: '마커 `^`의 모양은?', choices: ['위 삼각형', '아래 삼각형', '사각형', '별'], answer: 0, explain: 'v는 아래, ^는 위, <는 왼쪽, >는 오른쪽 삼각형.' },
       ],
       summary: [
         '**matplotlib**: 데이터 시각화, 2D 그래프·이미지 · 설치 `python -m pip install -U matplotlib` · `import matplotlib.pyplot as plt`',

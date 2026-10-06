@@ -164,6 +164,14 @@ print(floor(-2.5), ceil(-2.5))`, answer: '-3 -2', explain: '-2.5를 내리면 -3
         { type: 'blank', q: 'math 모듈을 가져오세요.', code: `___ math
 print(math.sqrt(9))`, options: ['import', 'from', 'include', 'use'], answer: ['import'], explain: '`import 모듈명`' },
         { type: 'mc', q: '두 지점 사이의 경과 시간을 재는 방법은?', choices: ['시작과 끝에서 time.time()을 구해 뺀다', 'time.ctime()을 두 번 출력한다', 'calendar.month()를 쓴다', 'random.random()을 쓴다'], answer: 0, explain: 'end - start = 걸린 초.' },
+        { type: 'match', pairs: [['`math.pi`', '원주율'], ['`math.e`', '자연 대수'], ['`math.inf`', '무한대'], ['`math.nan`', '숫자 아님']], explain: 'math 모듈의 상수들.' },
+        { type: 'output', code: `import math
+print(math.hypot(3, 4))`, answer: '5.0', explain: '피타고라스 정리: √(3² + 4²) = 5' },
+        { type: 'mc', q: '`math.sin(x)`, `math.cos(x)`, `math.tan(x)`에 넣는 x의 단위는?', choices: ['라디안', '각도(도)', '퍼센트', '초'], answer: 0, explain: '각도를 쓰고 싶으면 `math.radians(각도)`로 바꿔서 넣어요.' },
+        { type: 'output', code: `import math
+print(math.degrees(math.pi))`, answer: '180.0', explain: 'degrees는 라디안 → 각도. π 라디안 = 180도.' },
+        { type: 'output', code: `import math
+print(math.log10(1000))`, answer: '3.0', explain: '10을 몇 번 곱하면 1000? 3번. log10(x)는 log(x, 10)과 같아요.' },
       ],
       summary: [
         '`import 모듈` → `모듈.함수()` · 자주 쓰는 기능은 **표준 모듈**로 함께 설치됨',
@@ -344,6 +352,9 @@ f = open("m.txt", "w")
 f.write("Z")
 f.close()
 print(open("m.txt").read())`, answer: 'Z', explain: '두 번째 w가 기존 abc를 덮어써서 Z만 남아요.' },
+        { type: 'match', pairs: [['`shutil.copytree`', '디렉토리를 서브 디렉토리까지 복사'], ['`shutil.move`', '파일 이동'], ['`os.chmod`', '파일의 퍼미션 변경'], ['`shutil.chown`', '파일의 소유권 변경']], explain: '파일 관리 함수 표의 나머지 항목들.' },
+        { type: 'match', pairs: [['`os.link`', '하드 링크 생성'], ['`os.symlink`', '심볼릭 링크 생성'], ['`os.rmdir`', '디렉토리 제거'], ['`os.path.realpath`', '원본 파일의 경로를 구함']], explain: '링크와 경로 관련 함수.' },
+        { type: 'mc', q: '파일인지, 디렉토리인지 조사하는 함수를 바르게 짝지은 것은?', choices: ['`os.path.isfile` / `os.path.isdir`', '`os.path.exists` / `os.path.isabs`', '`os.listdir` / `os.getcwd`', '`glob.glob` / `os.mkdir`'], answer: 0, explain: 'is + file / is + dir(ectory).' },
       ],
       summary: [
         '`f = open(파일명, 모드)` → 파일 객체 · 사용 후 `f.close()`',
@@ -780,6 +791,19 @@ print(kim)`, answer: '이름 김상형, 나이 29', explain: 'print(객체)를 �
         { type: 'order', q: 'Dog 클래스를 만들고 객체로 짖게 하는 코드를 완성하세요.', lines: ['class Dog:', '    def __init__(self, name):', '        self.name = name', '    def bark(self):', '        print(self.name + ": 멍멍")', 'd = Dog("초코")', 'd.bark()'], explain: '클래스 정의(생성자 → 메서드) 후 객체 생성, 메서드 호출.' },
         { type: 'ox', q: '`__str__`를 정의하면 `print(객체)`를 할 때 그 메서드가 돌려준 문자열이 출력된다.', answer: true, explain: 'str(객체) 형식으로 문자열화할 때 쓰여요.' },
         { type: 'mc', q: '연산자 오버로딩이란?', choices: ['클래스별로 연산자의 동작을 고유하게 정의하는 것', '연산자를 너무 많이 쓰는 것', '연산자 우선순위를 바꾸는 것', '연산자를 삭제하는 것'], answer: 0, explain: '__eq__, __add__ 같은 메서드로 정의해요.' },
+        { type: 'match', pairs: [['`__ne__`', '`!=`'], ['`__gt__`', '`>`'], ['`__le__`', '`<=`'], ['`__ge__`', '`>=`']], explain: 'ne = not equal, gt = greater than, le = less or equal, ge = greater or equal.' },
+        { type: 'match', pairs: [['`__sub__`', '`-`'], ['`__mul__`', '`*`'], ['`__truediv__` (수업 표: `__div__`)', '`/`'], ['`__floordiv__`', '`//`']], explain: 'sub = subtract, mul = multiply, div = divide.' },
+        { type: 'match', pairs: [['`__mod__`', '`%`'], ['`__pow__`', '`**`'], ['`__lshift__`', '`<<`'], ['`__rshift__`', '`>>`']], explain: 'mod = 나머지, pow = 거듭제곱, shift = 비트 이동.' },
+        { type: 'mc', q: '객체가 연산자의 **오른쪽(우변)**에 있을 때 `//` 연산에 쓰이는 메서드는?', choices: ['`__rfloordiv__`', '`__floordiv__`', '`__lfloordiv__`', '`__div__`'], answer: 0, explain: '우변일 때는 앞에 r이 붙어요: __rfloordiv__, __rmod__, __rpow__ …' },
+        { type: 'mc', q: '`repr(객체)`를 호출했을 때 쓰이는 특수 메서드는?', choices: ['`__repr__`', '`__str__`', '`__len__`', '`__init__`'], answer: 0, explain: '__str__은 str()·print, __repr__은 repr(), __len__은 len().' },
+        { type: 'output', code: `class Money:
+    def __init__(self, v):
+        self.v = v
+    def __add__(self, other):
+        return Money(self.v + other.v)
+
+m = Money(300) + Money(200)
+print(m.v)`, answer: '500', explain: '`+`를 쓰면 __add__가 호출돼서 두 객체의 v를 더한 새 Money를 만들어요.' },
       ],
       summary: [
         '**클래스**: 속성과 동작을 묶어 사물을 흉내 · **모델링**(속성·동작 추출) · **캡슐화**(클래스로 포장) · **멤버**(변수+함수) · **메서드**(소속 함수)',
@@ -930,6 +954,8 @@ print("sqrt" in dir(math))`, answer: 'True', explain: 'dir(math) 목록에 sqrt�
         { type: 'mc', q: '외부(서드 파티) 모듈을 설치하는 명령은?', choices: ['`pip install 패키지명`', '`import install 패키지명`', '`python get 패키지명`', '`pip freeze 패키지명`'], answer: 0, explain: 'pip install numpy 처럼.' },
         { type: 'output', q: '같은 폴더의 util.py가 배우기 카드의 내용(`INCH = 2.54`, `calcsum(n)` 정의)일 때 출력은?', code: `import util
 print(util.calcsum(10))`, answer: '55', explain: 'util 모듈의 calcsum(10) = 0 + 1 + … + 10 = 55' },
+        { type: 'mc', q: 'mypack 패키지 calc 폴더의 add 모듈을 `add.outadd(1, 2)`처럼 짧게 쓰려면 어떻게 가져올까요?', choices: ['`from mypack.calc import add`', '`import add`', '`from add import mypack.calc`', '`import mypack.calc.add.outadd`'], answer: 0, explain: 'from 패키지 import 모듈' },
+        { type: 'mc', q: 'PyPI에서 패키지를 검색하는 pip 명령으로 수업 표에 나온 것은?', choices: ['`search`', '`show`', '`freeze`', '`find`'], answer: 0, explain: '수업 표 기준 search. (참고: 지금은 PyPI 정책으로 pip search가 막혀 있어 pypi.org 웹사이트에서 검색해요.)' },
       ],
       summary: [
         '**모듈** = 코드 저장 기본 단위(.py 파일 하나) · 표준 모듈 + 직접 제작 · `import util` (.py 빼고)',

@@ -241,6 +241,8 @@ print(hello())`, answer: 'hi\nNone', explain: '함수 안에서 hi를 출력하�
     return len(ints)
 
 print(intsum(4, 5, 6))`, answer: '3', explain: '가변 인수 ints는 (4, 5, 6) 튜플이라 길이 3.' },
+        { type: 'output', code: `print(list(range(5)))`, answer: '[0, 1, 2, 3, 4]', explain: '인수 1개: 0부터 시작, 5는 포함하지 않아요.' },
+        { type: 'output', code: `print(list(range(1, 10, 3)))`, answer: '[1, 4, 7]', explain: '인수 3개: 세 번째 인수 3은 숫자 사이의 거리.' },
       ],
       summary: [
         '**함수**: 코드 블록에 이름을 붙여 정의 · `def 이름(매개변수):` + 들여쓴 몸체 · 호출문 `함수(인수)`로 실행',
@@ -754,6 +756,17 @@ print(dic)`, answer: "{'a': 5, 'b': 7}", explain: 'a는 수정, b는 추가.' },
 print(dic.___('girl', '없는 단어'))`, options: ['get', 'find', 'index', 'keys'], answer: ['get'], explain: 'get(키, 기본값).' },
         { type: 'output', code: `print({1, 2, 3} > {1, 2})`, answer: 'True', explain: '왼쪽이 오른쪽을 포함하면서 원소가 더 있으니 진성 포함집합.' },
         { type: 'mc', q: '`issubset` 메서드와 같은 기호는?', choices: ['`<=`', '`>=`', '`&`', '`^`'], answer: 0, explain: '부분집합 <=, 포함집합 >=.' },
+        { type: 'mc', q: '출력 결과는?', out: true, code: `dic = {'boy':'소년', 'school':'학교'}
+print(list(dic.values()))`, choices: ["`['소년', '학교']`", "`['boy', 'school']`", "`[('boy', '소년'), ('school', '학교')]`", "`{'소년', '학교'}`"], answer: 0, explain: 'values()는 값만 모은 목록이에요.' },
+        { type: 'output', code: `dic = {'a': 1, 'b': 2}
+for k, v in dic.items():
+    print(k, v)`, answer: 'a 1\nb 2', explain: 'items()는 (키, 값) 쌍을 돌려줘서 k, v로 나눠 받을 수 있어요.' },
+        { type: 'output', code: `s = {1, 2}
+s.update({2, 3, 4})
+print(len(s))`, answer: '4', explain: 'update는 합집합. 중복 2는 하나만 남아 {1, 2, 3, 4}.' },
+        { type: 'output', code: `print({1, 2} < {1, 2})`, answer: 'False', explain: '진성 부분집합(<)은 "부분집합이면서 오른쪽에 원소가 더 있어야" 해요. 같은 집합이면 False. (<= 이었다면 True)' },
+        { type: 'output', code: `print({1, 2, 3}.issuperset({1, 2}))`, answer: 'True', explain: 'issuperset = 포함집합(>=). 왼쪽이 오른쪽을 포함하나요?' },
+        { type: 'output', code: `print(sorted({1, 2, 3}.intersection({2, 3, 4})))`, answer: '[2, 3]', explain: 'intersection 메서드는 & 와 같은 교집합. (union은 |, difference는 -)' },
       ],
       summary: [
         '**사전**: `{키:값, ...}` 키와 값의 쌍 · `dic[키]`로 빠른 검색 · 없는 키는 **KeyError**',

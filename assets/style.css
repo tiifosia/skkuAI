@@ -573,3 +573,66 @@ select, input[type="text"], input[type="number"] {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ───────── 사용성 개선: 아이콘 버튼, 배지, 할 일, 진행 막대 ───────── */
+.icon-btn {
+  width: 36px; height: 36px; flex: none; display: grid; place-items: center;
+  border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2); color: var(--mute); cursor: pointer;
+}
+.icon-btn:hover { color: var(--paper); }
+.icon-btn svg { width: 19px; height: 19px; }
+.nav-badge { display: inline-block; min-width: 18px; padding: 0 5px; border-radius: 99px; background: var(--bad); color: #1a0c0c; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center; }
+.todo { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; margin: -8px 0 8px; }
+.todo-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-color: var(--lav-line); }
+.todo-item > div { min-width: 0; }
+.world-bar { height: 4px; background: var(--slab); border-radius: 99px; overflow: hidden; margin: -4px 0 14px; }
+.world-bar i { display: block; height: 100%; background: var(--lav); }
+
+/* 하단 탭바: 휴대폰 전용 */
+.tabbar { display: none; }
+@media (max-width: 720px) {
+  .topbar .nav { display: none; }
+  .lvl-chip { margin-left: auto; }
+  .tabbar {
+    display: grid; grid-template-columns: repeat(6, minmax(0, 1fr));
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+    background: rgba(17, 17, 17, 0.97); border-top: 1px solid var(--line);
+    padding: 4px 2px calc(4px + env(safe-area-inset-bottom, 0px));
+    backdrop-filter: blur(8px);
+  }
+  .tabbar button {
+    position: relative; background: none; border: 0; cursor: pointer; color: var(--mute);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    min-height: 52px; font-size: 11px; padding: 2px 0; border-radius: 10px;
+  }
+  .tabbar button svg { width: 22px; height: 22px; }
+  .tabbar button[aria-current="page"] { color: var(--lav); }
+  .tabbar .badge { position: absolute; top: 3px; left: calc(50% + 6px); font-style: normal; background: var(--bad); color: #1a0c0c; font-size: 10px; font-weight: 700; border-radius: 99px; padding: 0 5px; line-height: 16px; }
+  .screen { padding-bottom: calc(110px + env(safe-area-inset-bottom, 0px)); }
+  .toast { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+  /* 문제 풀이 중에는 탭바를 숨겨 실수로 나가는 것을 막고 화면을 넓게 */
+  body.focus .tabbar { display: none; }
+  body.focus .screen { padding-bottom: 40px; }
+  body.focus .toast { bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
+
+  /* 길게 스크롤해도 다음/확인 버튼이 항상 손가락 아래에 */
+  .sticky-bar {
+    position: sticky; bottom: calc(64px + env(safe-area-inset-bottom, 0px)); z-index: 5;
+    background: linear-gradient(to bottom, transparent, var(--ink) 22px);
+    padding-top: 26px; padding-bottom: 8px; margin-top: 4px !important;
+  }
+  body.focus .sticky-bar { bottom: 0; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
+  .qactions.sticky-bar { background: linear-gradient(to bottom, transparent, var(--surface) 22px); margin-inline: -20px; padding-inline: 20px; border-radius: 0 0 var(--r-l) var(--r-l); }
+  .qactions .btn { min-height: 44px; }
+  .choice { min-height: 52px; }
+  .todo-item { flex-direction: column; align-items: stretch; }
+}
+@media (max-width: 720px) {
+  .topbar-inner { flex-wrap: nowrap; }
+  .brand { font-size: 20px; white-space: nowrap; }
+  .lvl-chip .bar { width: 48px; }
+  .lvl-chip > span:last-child { display: none; }
+}
+@media (max-width: 360px) {
+  .brand .prompt { display: none; }
+}

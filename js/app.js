@@ -155,7 +155,7 @@
   /* ───────────── 저장 ───────────── */
   const KEY = 'pyquest.v1';
   const DEFAULT = {
-    name: '', xp: 0, stages: {}, wrong: {}, lessonsDone: {},
+    name: '', xp: 0, stages: {}, wrong: {}, lessonsDone: {}, lessonPos: {}, seen: {}, labCode: null, resume: null,
     settings: { sound: true, unlockAll: false },
     onboarded: false, exams: [], streak: { day: '', count: 0 }, answered: 0, correct: 0,
   };
@@ -166,6 +166,8 @@
         const d = JSON.parse(raw);
         const s = Object.assign(clone(DEFAULT), d);
         s.settings = Object.assign({}, DEFAULT.settings, d.settings || {});
+        ['stages', 'wrong', 'lessonsDone', 'lessonPos', 'seen'].forEach((k) => { if (!s[k] || typeof s[k] !== 'object') s[k] = {}; });
+        if (!Array.isArray(s.exams)) s.exams = [];
         return s;
       }
     } catch (e) { /* 저장소를 쓸 수 없어도 게임은 진행 */ }
@@ -275,20 +277,41 @@
   let keyHandler = null;
   const timers = new Set();
   function stopTimers() { timers.forEach((t) => clearInterval(t)); timers.clear(); }
-  function go(name, params = {}) {
+  function go(name, params = {}, opts = {}) {
     stopTimers();
     keyHandler = null;
     view = Object.assign({ name }, params);
+    if (!opts.noPush) {
+      try { history.pushState({ pq: { name, id: params.id, li: params.li } }, ''); } catch (e) { /* 일부 환경은 history를 막음 */ }
+    }
     render();
     window.scrollTo(0, 0);
   }
+  // 브라우저·휴대폰의 뒤로 가기 버튼이 앱을 벗어나지 않고 이전 화면으로 가도록
+  window.addEventListener('popstate', (e) => {
+    const st = e.state && e.state.pq;
+    if (view.name === 'quiz' && SESSION && !SESSION.done) {
+      try { history.pushState({ pq: { name: 'quiz' } }, ''); } catch (er) { /* 무시 */ }
+      confirmBox('그만할까요?', '지금 풀던 문제는 저장되지 않아요.', '그만하기', () => {
+        SESSION = null;
+        if (st && st.name !== 'quiz' && st.name !== 'result') go(st.name, { id: st.id, li: st.li }); else go('home');
+      });
+      return;
+    }
+    $('#modal-root').innerHTML = '';
+    if (!st || st.name === 'quiz' || st.name === 'result') { go('home', {}, { noPush: true }); return; }
+    go(st.name, { id: st.id, li: st.li }, { noPush: true });
+  });
   function render() {
+    document.body.classList.toggle('focus', view.name === 'quiz');
     renderTop();
     const scr = $('#screen');
     scr.innerHTML = '';
     (SCREENS[view.name] || SCREENS.home)(scr);
   }
   document.addEventListener('keydown', (e) => {
+    // 한글 등 입력기 조합 중의 키(Enter 포함)는 무시: 조합이 끝나기 전에 제출되는 문제 방지
+    if (e.isComposing || e.keyCode === 229) return;
     if ($('#modal-root').firstChild) {
       if (e.key === 'Escape' && !$('.modal-back[data-sticky]')) $('#modal-root').innerHTML = '';
       if (modalKey) modalKey(e);
@@ -299,6 +322,17 @@
 
   /* ───────────── 상단 바 ───────────── */
   const NAV = [['home', '지도'], ['notes', '요약노트'], ['wrong', '오답노트'], ['exam', '모의고사'], ['lab', '실습실'], ['settings', '설정']];
+  const ICON = {
+    home: 'M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14',
+    notes: 'M6 3h9l3 3v15H6zM9 9h6M9 13h6M9 17h4',
+    wrong: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM9 9l6 6M15 9l-6 6',
+    exam: 'M9 3h6v3H9zM15 5h3v16H6V5h3M9 13l2 2 4-4',
+    lab: 'M4 5h16v14H4zM8 10l3 2-3 2M13 15h4',
+    settings: 'M4 7h10M18 7h2M4 17h4M12 17h8M14 5v4M8 15v4',
+    soundOn: 'M4 9h4l5-4v14l-5-4H4zM17 9a4 4 0 0 1 0 6M19.5 6.5a8 8 0 0 1 0 11',
+    soundOff: 'M4 9h4l5-4v14l-5-4H4zM17 10l4 4M21 10l-4 4',
+  };
+  const icon = (k) => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + ICON[k] + '"/></svg>';
   function renderTop() {
     const L = levelInfo(S.xp);
     const sessNav = SESSION && SESSION.mode === 'exam' ? 'exam' : SESSION && SESSION.mode === 'review' ? 'wrong' : 'home';
@@ -308,10 +342,19 @@
       '<div class="topbar-inner">' +
       '<button class="brand" data-go="home" aria-label="지도로 가기"><span class="prompt">&gt;&gt;&gt;</span>파이썬 퀘스트</button>' +
       '<div class="lvl-chip" title="경험치"><b>Lv.' + L.lvl + '</b><span class="bar"><i style="width:' + Math.round((L.cur / L.need) * 100) + '%"></i></span><span>' + L.cur + '/' + L.need + '</span></div>' +
+      '<button class="icon-btn" data-sound type="button" aria-label="효과음 ' + (S.settings.sound ? '끄기' : '켜기') + '" title="효과음 ' + (S.settings.sound ? '끄기' : '켜기') + '">' + icon(S.settings.sound ? 'soundOn' : 'soundOff') + '</button>' +
       '<nav class="nav" aria-label="메뉴">' +
-      NAV.map(([k, t]) => '<button data-go="' + k + '"' + (navName === k ? ' aria-current="page"' : '') + '>' + t + (k === 'wrong' && wc ? ' ' + wc : '') + '</button>').join('') +
+      NAV.map(([k, t]) => '<button data-go="' + k + '"' + (navName === k ? ' aria-current="page"' : '') + '>' + t + (k === 'wrong' && wc ? ' <span class="nav-badge">' + wc + '</span>' : '') + '</button>').join('') +
       '</nav></div>';
-    $$('#topbar [data-go]').forEach((b) => {
+    $('#tabbar').innerHTML = NAV.map(([k, t]) => '<button data-go="' + k + '" type="button"' + (navName === k ? ' aria-current="page"' : '') + '>' + icon(k) + '<span>' + t + '</span>' + (k === 'wrong' && wc ? '<i class="badge">' + wc + '</i>' : '') + '</button>').join('');
+    $('[data-sound]', $('#topbar')).onclick = () => {
+      S.settings.sound = !S.settings.sound;
+      save();
+      renderTop();
+      toast(S.settings.sound ? '효과음 켬' : '효과음 끔');
+      SFX.ok();
+    };
+    $$('#topbar [data-go], #tabbar [data-go]').forEach((b) => {
       b.onclick = () => {
         const target = b.dataset.go;
         if (view.name === 'quiz' && SESSION && !SESSION.done) {
@@ -335,8 +378,19 @@
       });
       return;
     }
-    if (item.kind === 'boss') startBoss(item.world);
-    else go('stage', { id: item.id, phase: 'learn', li: 0 });
+    if (item.kind === 'boss') { startBoss(item.world); return; }
+    const r = validResume(item.id);
+    if (r) {
+      modal('<h2>풀던 도전이 있어요</h2><p class="muted">' + esc(item.title) + ' · ' + r.idx + ' / ' + r.qids.length + '문제까지 풀었고 하트가 ' + r.hearts + '개 남아 있어요.</p><div class="stack"><button class="btn primary" data-a type="button">이어서 풀기</button><button class="btn" data-b type="button">배우기 카드부터 보기</button><button class="btn ghost" data-c type="button">처음부터 다시 풀기</button></div>', (m, close) => {
+        $('[data-a]', m).onclick = () => { close(); resumeStage(item); };
+        $('[data-b]', m).onclick = () => { close(); go('stage', { id: item.id, li: 0 }); };
+        $('[data-c]', m).onclick = () => { close(); S.resume = null; save(); startStage(item); };
+      });
+      return;
+    }
+    const pos = !S.lessonsDone[item.id] && S.lessonPos[item.id] ? S.lessonPos[item.id] : 0;
+    go('stage', { id: item.id, li: pos });
+    if (pos > 0) toast('지난번에 보던 ' + (pos + 1) + '번째 카드부터 이어서 볼게요');
   }
   const SCREENS = {};
   SCREENS.home = function (scr) {
@@ -371,9 +425,27 @@
     if (ebtn) ebtn.onclick = () => go('exam');
     $('[data-tutorial]', hero).onclick = () => onboarding(true);
 
+    // 오늘 할 일: 오답 복습, 모의고사 추천
+    const todo = [];
+    const rs = S.resume && STAGE[S.resume.stageId] && validResume(S.resume.stageId);
+    if (rs) todo.push({ t: '풀던 도전: ' + STAGE[rs.stageId].title, d: rs.idx + ' / ' + rs.qids.length + '문제까지 풀었어요 · 하트 ' + rs.hearts + '개 남음', b: '이어서 풀기', f: () => resumeStage(STAGE[rs.stageId]) });
+    const wc = wrongCount();
+    if (wc) todo.push({ t: '오답 ' + wc + '개가 기다려요', d: '틀린 문제만 다시 풀어서 오답노트를 비워 보세요.', b: '오답 복습하기', f: () => startReview(Object.keys(S.wrong).filter((k) => QINDEX[k])) });
+    const doneWorld = WORLDS.filter((w) => w.stages.every((s) => isCleared(s.id)));
+    if (doneWorld.length && !S.exams.length) todo.push({ t: doneWorld.map((w) => w.lecture).join(', ') + ' 범위를 다 배웠어요', d: '모의고사로 실전처럼 점검해 보세요.', b: '모의고사 보기', f: () => go('exam') });
+    if (todo.length) {
+      const box = el('<section class="todo" aria-label="오늘 할 일"></section>');
+      todo.forEach((x) => {
+        const c = el('<div class="panel todo-item"><div><strong>' + esc(x.t) + '</strong><p class="muted" style="font-size:14px">' + esc(x.d) + '</p></div><button class="btn small" type="button">' + esc(x.b) + '</button></div>');
+        $('button', c).onclick = x.f;
+        box.appendChild(c);
+      });
+      scr.appendChild(box);
+    }
+
     WORLDS.forEach((w) => {
       const done = w.stages.filter((s) => isCleared(s.id)).length;
-      const sec = el('<section class="world"><div class="world-head"><div><span class="caption">' + esc(w.lecture) + '</span><h2>' + esc(w.title) + '</h2></div><span class="meta">' + esc(w.desc) + ' · ' + done + '/' + w.stages.length + ' 클리어</span></div><div class="trail"></div></section>');
+      const sec = el('<section class="world"><div class="world-head"><div><span class="caption">' + esc(w.lecture) + '</span><h2>' + esc(w.title) + '</h2></div><span class="meta">' + esc(w.desc) + ' · ' + done + '/' + w.stages.length + ' 클리어</span></div><div class="world-bar" role="progressbar" aria-valuemin="0" aria-valuemax="' + w.stages.length + '" aria-valuenow="' + done + '" aria-label="' + esc(w.lecture) + ' 진행률"><i style="width:' + Math.round((done / w.stages.length) * 100) + '%"></i></div><div class="trail"></div></section>');
       const trail = $('.trail', sec);
       [...w.stages, w.boss].forEach((item) => {
         const r = rec(item.id);
@@ -447,7 +519,7 @@
       '<div class="code"><div class="code-head"><span class="dots"><i></i><i></i><i></i></span><span>한 줄씩 실행하기</span><span class="step-n"></span></div><pre></pre></div>' +
       '<div class="tracer-note"></div>' +
       '<div class="tracer-state"><div class="tracer-box"><span class="lbl">변수 상태</span><div class="vars"></div></div><div class="tracer-box"><span class="lbl">출력 화면</span><div class="tracer-out"></div></div></div>' +
-      '<div class="row"><button class="btn small ghost" data-first type="button">⏮ 처음</button><button class="btn small" data-prev type="button">◀ 이전</button><button class="btn small primary" data-next type="button">다음 줄 ▶</button></div>' +
+      '<div class="row"><button class="btn small ghost" data-first type="button">⏮ 처음</button><button class="btn small" data-prev type="button">◀ 이전</button><button class="btn small primary" data-next type="button">다음 줄 ▶</button><button class="btn small ghost" data-auto type="button">▶ 자동 재생</button></div>' +
       '</div>'
     );
     const pre = $('pre', box);
@@ -472,9 +544,22 @@
       const line = $('.line.hl', pre);
       if (line) line.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     }
-    $('[data-next]', box).onclick = () => { k = k === tr.steps.length - 1 ? 0 : k + 1; show(); };
-    $('[data-prev]', box).onclick = () => { if (k > 0) { k--; show(); } };
-    $('[data-first]', box).onclick = () => { k = 0; show(); };
+    let auto = null;
+    const autoBtn = $('[data-auto]', box);
+    const stopAuto = () => { if (auto) { clearInterval(auto); timers.delete(auto); auto = null; } autoBtn.textContent = '▶ 자동 재생'; };
+    autoBtn.onclick = () => {
+      if (auto) { stopAuto(); return; }
+      if (k === tr.steps.length - 1) { k = 0; show(); }
+      autoBtn.textContent = '⏸ 멈춤';
+      auto = setInterval(() => {
+        if (!box.isConnected || k >= tr.steps.length - 1) { stopAuto(); return; }
+        k++; show();
+      }, 900);
+      timers.add(auto);
+    };
+    $('[data-next]', box).onclick = () => { stopAuto(); k = k === tr.steps.length - 1 ? 0 : k + 1; show(); };
+    $('[data-prev]', box).onclick = () => { stopAuto(); if (k > 0) { k--; show(); } };
+    $('[data-first]', box).onclick = () => { stopAuto(); k = 0; show(); };
     show();
     return box;
   }
@@ -584,7 +669,7 @@
     const card = el('<section class="panel lesson-card"><div class="lesson-top"><span class="caption">배우기 ' + total + ' / ' + total + ' · 정리</span></div><div class="lesson-progress"><i style="width:100%"></i></div><h2>핵심 정리</h2><div class="lesson-body">' +
       md((st.summary || []).map((x) => '- ' + x).join('\n')) + '</div></section>');
     if (st.traps && st.traps.length) card.appendChild(warnBlock(st.traps.map((x) => '- ' + x).join('\n')));
-    card.appendChild(el('<p class="muted" style="font-size:14px">이 정리는 상단 메뉴의 <strong>요약노트</strong>에서 언제든 다시 볼 수 있어요. 이제 문제 ' + (st.quiz || []).length + '개로 확인해 봐요. 하트 5개가 모두 사라지기 전에 끝까지 풀면 클리어!</p>'));
+    card.appendChild(el('<p class="muted" style="font-size:14px">이 정리는 상단 메뉴의 <strong>요약노트</strong>에서 언제든 다시 볼 수 있어요. 이제 문제 ' + (st.quiz || []).length + '개(약 ' + Math.max(3, Math.round((st.quiz || []).length * 0.6)) + '분)로 확인해 봐요. 하트 ' + heartsFor((st.quiz || []).length) + '개가 모두 사라지기 전에 끝까지 풀면 클리어! 중간에 나가도 이어서 풀 수 있어요.</p>'));
     return card;
   }
 
@@ -593,10 +678,11 @@
     if (!st || st.kind !== 'stage') return go('home');
     const total = st.lessons.length + 1;
     const i = Math.min(view.li || 0, total - 1);
+    if (S.lessonPos[st.id] !== i) { S.lessonPos[st.id] = i; save(); }
     scr.appendChild(el(stageHeader(st, 'learn')));
     if (i === 0 && st.goal) scr.appendChild(el('<p class="muted" style="margin:-6px 0 16px">' + inl('이번 목표: ' + st.goal) + '</p>'));
     scr.appendChild(i < st.lessons.length ? lessonCard(st, st.lessons[i], i, total) : summaryCard(st, total));
-    const nav = el('<div class="row between" style="margin-top:16px"><div class="row"><button class="btn ghost" data-prev type="button">◀ 이전</button></div><div class="row"><button class="btn ghost small" data-skip type="button">배우기 건너뛰고 도전</button><button class="btn primary" data-next type="button"></button></div></div>');
+    const nav = el('<div class="row between sticky-bar" style="margin-top:16px"><div class="row"><button class="btn ghost" data-prev type="button">◀ 이전</button></div><div class="row"><button class="btn ghost small" data-skip type="button">배우기 건너뛰고 도전</button><button class="btn primary" data-next type="button"></button></div></div>');
     const last = i === total - 1;
     $('[data-next]', nav).textContent = last ? '도전 시작 ▶' : '다음 ▶';
     $('[data-prev]', nav).disabled = i === 0;
@@ -631,12 +717,27 @@
     SESSION = Object.assign({
       idx: 0, hearts: Infinity, maxHearts: 0, mistakes: 0, combo: 0, maxCombo: 0, xp: 0, log: [], startedAt: Date.now(), done: false, failed: false, timer: 0,
     }, cfg);
-    SESSION.maxHearts = SESSION.hearts === Infinity ? 0 : SESSION.hearts;
+    SESSION.maxHearts = cfg.maxHearts || (SESSION.hearts === Infinity ? 0 : SESSION.hearts);
     go('quiz');
   }
+  // 문제가 많은 스테이지는 하트도 많이 (20문제까지 5개, 그 위로 4문제당 1개, 최대 9개)
+  const heartsFor = (n) => Math.min(9, Math.max(5, Math.ceil(n / 4)));
   function startStage(st) {
+    if (S.resume && S.resume.stageId === st.id) S.resume = null;
     const qs = shuffle(st.quiz.map((q) => q));
-    startSession({ mode: 'stage', stageId: st.id, title: st.title, questions: qs, hearts: 5 });
+    startSession({ mode: 'stage', stageId: st.id, title: st.title, questions: qs, hearts: heartsFor(qs.length) });
+  }
+  // 도전 도중에 나가도 이어서 풀 수 있도록 저장된 기록
+  function validResume(id) {
+    const r = S.resume;
+    if (!r || r.stageId !== id || !Array.isArray(r.qids) || !r.qids.every((k) => QINDEX[k])) return null;
+    if (r.qids.length !== STAGE[id].quiz.length || r.idx >= r.qids.length) return null;
+    return r;
+  }
+  function resumeStage(st) {
+    const r = validResume(st.id);
+    if (!r) { startStage(st); return; }
+    startSession({ mode: 'stage', stageId: st.id, title: st.title, questions: r.qids.map((k) => QINDEX[k]), hearts: r.hearts, idx: r.idx, mistakes: r.mistakes, combo: r.combo, maxCombo: r.maxCombo, xp: r.xp, log: r.log, maxHearts: r.maxHearts });
   }
   function startBoss(w) {
     const pool = w.stages.filter((s) => !s.tutorial).flatMap((s) => s.quiz);
@@ -692,7 +793,10 @@
         });
       };
       W.key = (e) => {
-        const n = isOX ? { o: 1, O: 1, '1': 1, x: 2, X: 2, '2': 2 }[e.key] : parseInt(e.key, 10);
+        // e.code는 자판 언어와 상관없는 물리 키 (한글 자판에서 O 키는 'ㅐ'로 들어옴)
+        const n = isOX
+          ? ({ KeyO: 1, Digit1: 1, Numpad1: 1, KeyX: 2, Digit2: 2, Numpad2: 2 }[e.code] || { o: 1, O: 1, x: 2, X: 2, '1': 1, '2': 2 }[e.key])
+          : (/^(Digit|Numpad)[1-9]$/.test(e.code) ? +e.code.slice(-1) : parseInt(e.key, 10));
         if (n >= 1 && n <= order.length) { $$('.choice', W.el)[n - 1].click(); return true; }
         return false;
       };
@@ -709,15 +813,33 @@
       inp.addEventListener('input', onChange);
       W.ready = () => inp.value.trim().length > 0;
       W.check = () => {
-        const g = normalizeOut(inp.value);
+        const raw = inp.value;
+        const g = normalizeOut(raw);
         const acc = [q.answer].concat(q.accept || []).map(normalizeOut);
-        return { ok: acc.includes(g), given: inp.value };
+        if (acc.includes(g)) return { ok: true, given: raw };
+        // 쉼표·괄호 주변 공백만 다르면 정답으로 인정하고 실제 모양을 알려 줌
+        const squash = (x) => x.replace(/\s*([,:()\[\]{}])\s*/g, '$1');
+        if (acc.some((a) => squash(a) === squash(g))) return { ok: true, given: raw, note: '공백 위치만 달라서 정답으로 인정했어요. 실제 출력은 `' + q.answer.split('\n')[0] + '` 모양이에요.' };
+        let note = '';
+        const unq = g.split('\n').map((l) => l.replace(/^(['"])(.*)\1$/, '$2')).join('\n');
+        if (unq !== g && acc.includes(unq)) note = '내용은 맞았어요! 하지만 print는 문자열의 **따옴표를 출력하지 않아요**.';
+        else if (acc.some((a) => a.toLowerCase() === g.toLowerCase())) note = '대소문자가 달라요. 파이썬은 `True`, `False`, `None`처럼 대소문자를 정확히 구분해요.';
+        else if (g.split('\n').length !== acc[0].split('\n').length) note = '줄 수가 달라요. 정답은 **' + acc[0].split('\n').length + '줄**이에요. print 한 번에 한 줄, `end=""`이면 줄이 바뀌지 않아요.';
+        return { ok: false, given: raw, note };
       };
       W.reveal = (ok) => { inp.readOnly = true; inp.classList.add(ok ? 'right' : 'wrong'); };
       W.focus = () => inp.focus();
       W.multi = multi;
       W.answerText = () => q.answer;
-      W.hint = () => '출력은 ' + q.answer.split('\n').length + '줄이에요' + (q.hint ? ' · ' + q.hint : '');
+      let hintStep = 0;
+      W.hintMax = 2;
+      W.hint = () => {
+        hintStep++;
+        const lines = q.answer.split('\n');
+        if (hintStep === 1) return '출력은 ' + lines.length + '줄이에요' + (q.hint ? ' · ' + q.hint : '');
+        const first = lines[0];
+        return '첫 줄은 "' + first.slice(0, Math.max(1, Math.ceil(first.length / 2))) + '…"(으)로 시작해요';
+      };
       return W;
     }
 
@@ -900,12 +1022,18 @@
     const timerEl = el('<span class="timer"></span>');
     if (se.timer || isExam) hud.appendChild(timerEl);
     scr.appendChild(el('<div class="stage-head" style="margin-bottom:10px"><span class="caption">' + esc({ stage: '스테이지 도전', boss: '보스전', review: '오답 복습', exam: '모의고사' }[se.mode]) + '</span><h1 style="font-size:clamp(22px,4vw,30px)">' + esc(se.title) + '</h1></div>'));
+    if (se.mode === 'stage' && !S.seen.quizTip) {
+      const tipEl = el('<div class="tip" style="margin-bottom:14px">' + mascot() + '<div><span class="who">첫 도전 안내</span><div class="lesson-body"><ul><li>답을 고르고 <strong>확인</strong> → 바로 정답과 해설</li><li><span style="color:var(--bad)">♥</span> ' + se.maxHearts + '개: 틀리면 하나씩 줄어요</li><li>틀린 문제는 오답노트에 저장, 중간에 나가도 이어 풀기 가능</li></ul><div class="row"><button class="btn small primary" type="button">알겠어요</button></div></div></div></div>');
+      $('button', tipEl).onclick = () => { S.seen.quizTip = true; save(); tipEl.remove(); };
+      scr.appendChild(tipEl);
+    }
     scr.appendChild(hud);
 
     const card = el('<section class="panel qcard"><div class="row between"><span class="qtype">' + TYPE_LABEL[q.type] + '</span><span class="pill">' + esc(q.stage.world.lecture + ' · ' + q.stage.num + '. ' + q.stage.title) + '</span></div><div class="qtext">' + inl(q.q || DEFAULT_Q[q.type] || '') + '</div></section>');
     if (q.code && q.type !== 'blank') card.appendChild(codeBlock(q.code, { lab: false }));
     const fbSlot = el('<div></div>');
-    const actions = el('<div class="qactions"><span class="hint-text"></span><button class="btn ghost small" data-giveup type="button">' + (isExam ? '모르겠어요 (넘기기)' : '정답 보기') + '</button><button class="btn primary" data-check type="button" disabled>확인</button></div>');
+    const giveLabel = isExam ? '모르겠어요 (넘기기)' : se.maxHearts ? '정답 보기 (♥ -1)' : '정답 보기';
+    const actions = el('<div class="qactions sticky-bar"><span class="hint-text"></span><button class="btn ghost small" data-giveup type="button">' + giveLabel + '</button><button class="btn primary" data-check type="button" disabled>확인</button></div>');
     let W;
     const onChange = () => { $('[data-check]', actions).disabled = !W.ready(); };
     W = widget(q, onChange);
@@ -915,11 +1043,17 @@
     scr.appendChild(card);
     if (W.hint) {
       const hb = el('<button class="btn ghost small" type="button">힌트</button>');
-      hb.onclick = () => { $('.hint-text', actions).textContent = W.hint(); hb.remove(); };
+      let used = 0;
+      hb.onclick = () => {
+        used++;
+        $('.hint-text', actions).textContent = W.hint();
+        if (used >= (W.hintMax || 1)) hb.remove(); else hb.textContent = '힌트 더 보기';
+      };
       actions.insertBefore(hb, $('[data-giveup]', actions));
     }
     const quitRow = el('<div class="row" style="margin-top:14px"><button class="btn ghost small" type="button">그만하기</button><span class="muted" style="font-size:13px">' + (q.type === 'mc' ? '숫자키 <kbd>1</kbd>~<kbd>4</kbd> 로 고르고 <kbd>Enter</kbd> 로 확인' : q.type === 'ox' ? '<kbd>O</kbd> / <kbd>X</kbd> 키로 고르고 <kbd>Enter</kbd> 로 확인' : '') + '</span></div>');
-    $('button', quitRow).onclick = () => confirmBox('그만할까요?', '지금 도전 중인 기록은 저장되지 않아요.', '그만하기', () => { SESSION = null; go(se.mode === 'review' ? 'wrong' : se.mode === 'exam' ? 'exam' : 'home'); });
+    const quitMsg = se.mode === 'stage' ? '지금까지 푼 기록은 저장돼요. 지도에서 이 스테이지를 다시 누르면 이어서 풀 수 있어요.' : '지금 풀던 기록은 저장되지 않아요.';
+    $('button', quitRow).onclick = () => confirmBox('그만할까요?', quitMsg, '그만하기', () => { SESSION = null; go(se.mode === 'review' ? 'wrong' : se.mode === 'exam' ? 'exam' : 'home'); });
     scr.appendChild(quitRow);
     if (W.focus) setTimeout(W.focus, 30);
 
@@ -946,6 +1080,12 @@
         const w = S.wrong[q.qid] || { n: 0 };
         S.wrong[q.qid] = { n: w.n + 1, t: Date.now() };
       }
+      if (se.mode === 'stage') {
+        S.resume = se.hearts === 0 || se.idx + 1 >= total ? null : {
+          stageId: se.stageId, qids: se.questions.map((x) => x.qid), idx: se.idx + 1, hearts: se.hearts, maxHearts: se.maxHearts,
+          mistakes: se.mistakes, combo: se.combo, maxCombo: se.maxCombo, xp: se.xp, log: se.log,
+        };
+      }
       save();
       if (isExam) { advance(); return; }
       W.reveal(ok);
@@ -953,6 +1093,7 @@
       const ansHTML = W.answerIsCode ? '<div class="ans">' + hlInline(W.answerText()) + '</div>' : '<div class="ans">' + esc(String(W.answerText()).replace(/`/g, '')) + '</div>';
       const praise = ['정답!', '좋아요!', '완벽해요!', '바로 그거예요!'];
       const fb = el('<div class="feedback ' + (ok ? 'ok' : 'bad') + '"><div class="fb-title">' + (ok ? praise[Math.floor(Math.random() * praise.length)] + (se.combo >= 3 ? ' ' + se.combo + '콤보!' : '') : res.timeout ? '시간 초과!' : '아쉬워요') + '</div>' +
+        (res.note ? '<div class="lesson-body"><p>' + inl(res.note) + '</p></div>' : '') +
         (ok ? '' : '<div><span class="muted" style="font-size:13px">정답</span>' + ansHTML + '</div>') +
         (q.explain ? '<div class="lesson-body">' + md(q.explain) + '</div>' : '') + '</div>');
       fbSlot.appendChild(fb);
@@ -1014,6 +1155,7 @@
   function endSession() {
     const se = SESSION;
     se.done = true;
+    if (se.mode === 'stage' && S.resume && S.resume.stageId === se.stageId) S.resume = null;
     stopTimers();
     se.correct = se.log.filter((x) => x.ok).length;
     const total = se.questions.length;
@@ -1022,7 +1164,7 @@
       const cleared = !se.failed;
       let stars = 0;
       if (cleared) {
-        if (se.mode === 'stage') stars = se.mistakes === 0 ? 3 : se.mistakes <= 2 ? 2 : 1;
+        if (se.mode === 'stage') { const acc = se.correct / total; stars = acc >= 0.95 ? 3 : acc >= 0.8 ? 2 : 1; }
         else stars = se.hearts >= 3 ? 3 : se.hearts === 2 ? 2 : 1;
       }
       const old = rec(se.stageId);
@@ -1097,6 +1239,12 @@
         const b = el('<button class="btn primary" type="button">다음: ' + esc(nxt.kind === 'boss' ? nxt.title : nxt.num + '. ' + nxt.title) + ' ▶</button>');
         b.onclick = () => openItem(nxt);
         btns.appendChild(b);
+      }
+      const wrongIds = se.log.filter((x) => !x.ok).map((x) => x.qid);
+      if (wrongIds.length) {
+        const rv = el('<button class="btn" type="button">틀린 ' + wrongIds.length + '문제만 다시 풀기</button>');
+        rv.onclick = () => startReview(wrongIds);
+        btns.appendChild(rv);
       }
       const again = el('<button class="btn' + (cleared ? '' : ' primary') + '" type="button">다시 도전</button>');
       again.onclick = () => (se.mode === 'boss' ? startBoss(STAGE[se.stageId].world) : startStage(st));
@@ -1314,7 +1462,7 @@
   let labCode = null;
   SCREENS.lab = function (scr) {
     if (view.code) { labCode = view.code; view.code = null; }
-    if (labCode == null) labCode = LAB_DEFAULT;
+    if (labCode == null) labCode = S.labCode || LAB_DEFAULT;
     scr.appendChild(el('<div class="stage-head"><span class="caption">직접 쳐보면 두 배로 기억나요</span><h1>실습실</h1><p class="muted">브라우저 안에서 진짜 파이썬이 돌아가요. 처음 실행할 때 엔진(약 10MB)을 내려받느라 시간이 조금 걸려요. numpy, pandas도 import 하면 자동으로 불러와요. 그래프(matplotlib)는 Google Colab에서 확인하세요.</p></div>'));
     const p = el('<section class="panel stack"></section>');
     const sel = el('<select id="lab-example" aria-label="예제 불러오기"><option value="">예제 불러오기…</option></select>');
@@ -1331,7 +1479,12 @@
     p.appendChild(top);
     const ed = el('<textarea class="editor" id="lab-editor" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="파이썬 코드"></textarea>');
     ed.value = labCode;
-    ed.addEventListener('input', () => { labCode = ed.value; });
+    let saveT = null;
+    ed.addEventListener('input', () => {
+      labCode = ed.value;
+      clearTimeout(saveT);
+      saveT = setTimeout(() => { S.labCode = labCode; save(); }, 600);
+    });
     ed.addEventListener('keydown', (e) => {
       if (e.key === 'Tab') {
         e.preventDefault();
@@ -1355,7 +1508,7 @@
       ed.value = labCode = STAGE[sid].lessons[+i].code;
       sel.value = '';
     };
-    $('[data-reset]', acts).onclick = () => { ed.value = labCode = LAB_DEFAULT; };
+    $('[data-reset]', acts).onclick = () => { ed.value = labCode = LAB_DEFAULT; S.labCode = null; save(); };
     async function run() {
       const o = $('.out', out);
       o.classList.remove('err');
@@ -1429,7 +1582,7 @@
       },
       {
         t: '규칙은 간단해요',
-        b: '<ul style="margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:8px"><li>스테이지 도전에는 <span style="color:var(--bad)">♥</span> 하트 5개가 있어요. 다 잃으면 다시 도전!</li><li>하나도 안 틀리면 <span class="lav">★★★</span>, 2개 이하로 틀리면 <span class="lav">★★</span>, 끝까지 버티면 <span class="lav">★</span></li><li>연속으로 맞히면 <strong>콤보</strong>로 경험치가 더 쌓이고 레벨이 올라요.</li><li>강의마다 마지막에 <strong>보스전</strong>이 있어요. 제한 시간과 하트 3개로 실력을 확인해요.</li></ul>',
+        b: '<ul style="margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:8px"><li>스테이지 도전에는 <span style="color:var(--bad)">♥</span> 하트가 5개 이상(문제가 많으면 더 많이) 있어요. 다 잃으면 다시 도전!</li><li>정답률 95% 이상이면 <span class="lav">★★★</span>, 80% 이상이면 <span class="lav">★★</span>, 끝까지 버티면 <span class="lav">★</span></li><li>도전 중에 나가도 기록이 저장돼서 이어서 풀 수 있어요.</li><li>연속으로 맞히면 <strong>콤보</strong>로 경험치가 더 쌓이고 레벨이 올라요.</li><li>강의마다 마지막에 <strong>보스전</strong>이 있어요. 제한 시간과 하트 3개로 실력을 확인해요.</li></ul>',
       },
       {
         t: '시험 직전엔 이것만 기억하세요',
@@ -1469,6 +1622,7 @@
   }
 
   /* ───────────── 시작 ───────────── */
+  try { history.replaceState({ pq: { name: 'home' } }, ''); } catch (e) { /* 무시 */ }
   render();
   if (!S.onboarded) onboarding(false);
 

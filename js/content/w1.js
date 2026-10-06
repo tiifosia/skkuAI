@@ -181,6 +181,9 @@ print(1 + 2)`,
         { type: 'ox', q: 'GPU는 CPU보다 ALU가 훨씬 많아서, 단순한 계산을 동시에 대량으로 처리하는 데 유리하다.', answer: true, explain: '그래서 딥러닝처럼 단순 계산이 엄청 많은 작업에 GPU를 써요.' },
         { type: 'mc', q: '파이썬을 내 컴퓨터에 설치할 때 이용하는 공식 사이트는?', choices: ['www.python.org', 'colab.research.google.com', 'www.sqlite.org', 'pandas.pydata.org'], answer: 0, explain: 'python.org에서 내려받아요. colab 주소는 설치 없이 쓰는 웹 서비스예요.' },
         { type: 'mc', q: 'GUI의 뜻은?', choices: ['Graphic User Interface', 'General Use Internet', 'Global Unit Index', 'Graph Utility Interface'], answer: 0, explain: '윈도우 창처럼 화면을 보며 마우스·키보드로 조작하는 프로그램이에요. 파이썬은 tkinter로 만들어요.' },
+        { type: 'mc', q: '파이썬 활용 분야 중 "분석 결과를 다양한 그래프로 시각화해서 보여주는" 분야는?', choices: ['데이터 분석', 'GUI 프로그래밍', '웹 프로그래밍', '데이터베이스 프로그래밍'], answer: 0, explain: '빅데이터 분석에 파이썬을 쓰는 경우가 점차 늘고 있고, 분석 결과를 그래프로 시각화해요.' },
+        { type: 'ox', q: '파이썬은 웹 프로그래밍(웹 프로그램 만들기)에도 적합한 도구이다.', answer: true, explain: '수업 자료의 활용 분야: GUI, 웹, 수치 연산, 데이터베이스, 데이터 분석.' },
+        { type: 'mc', q: 'Colab에 기본으로 설치되어 있다고 소개된 패키지 묶음은?', choices: ['TensorFlow, Keras, matplotlib, scikit-learn, pandas', 'tkinter, pickle, MySQL', 'Word, Excel, PowerPoint', 'Java, C++, HTML'], answer: 0, explain: '데이터 분석에 쓰이는 패키지들이 기본 설치되어 있어서 바로 import 할 수 있어요.' },
       ],
       summary: [
         '**컴파일 언어**: 모든 명령을 일괄 번역 후 실행 · 코딩→컴파일→실행→디버깅 · 빠르지만 구조 복잡',
@@ -329,6 +332,9 @@ print("내년 : " + ___(___(year) + 1))`, options: ['str', 'int', 'print', 'inpu
         { type: 'output', code: `print("가", "나", sep="")
 print("다", end="!")
 print("라")`, answer: '가나\n다!라', explain: '첫 줄은 구분자가 없어 "가나". 둘째 줄은 끝 문자가 "!"라서 줄이 안 바뀌고 "라"가 이어져요.' },
+        { type: 'ox', q: '`>>>` 프롬프트에서 명령을 입력할 때는 일반적으로 첫 칸부터 입력한다.', answer: true, explain: '블록이 아닌데 앞에 공백을 넣으면 IndentationError가 나요.' },
+        { type: 'output', code: `year = "2021"
+print("내년 : " + str(int(year) + 1))`, answer: '내년 : 2022', explain: 'int로 숫자로 바꿔 1을 더하고, str로 다시 문자열로 바꿔 이어 붙여요.' },
       ],
       summary: [
         '**한 줄에 하나의 명령** (세미콜론 `;`으로 여러 명령 가능하지만 지양)',
@@ -468,6 +474,7 @@ print(score)`, answer: 'high', explain: '실행 중에 타입이 정수에서 �
         { type: 'mc', q: '`print(type(3.14))`의 결과에 나오는 타입 이름은?', choices: ['int', 'float', 'str', 'complex'], answer: 1, explain: "소수점이 있으니 실수형 float → `<class 'float'>`" },
         { type: 'output', code: `print(0x2f)`, answer: '47', explain: '2×16 + 15(f) = 47' },
         { type: 'mc', q: '정수형(int)에 대한 설명으로 옳은 것은?', choices: ['소수점 이하 값을 표현할 수 없다', '소수점 이하를 정밀하게 표현한다', '끝에 j를 붙여 표현한다', '따옴표로 감싸서 표현한다'], answer: 0, explain: '소수점 이하는 실수형(float)이 담당해요.' },
+        { type: 'mc', q: '변수에 대한 설명으로 옳은 것은?', choices: ['메모리에 이름을 붙이고 값을 저장하는 것', '한 번 저장하면 값을 바꿀 수 없는 것', '반드시 숫자만 저장할 수 있는 것', '프로그램이 끝나도 남아 있는 파일'], answer: 0, explain: '변수 = 메모리에 이름 붙이고 값을 저장하는 것. 값은 언제든 바꿀 수 있어요.' },
       ],
       summary: [
         '**변수**: 메모리에 이름을 붙이고 값을 저장 · `=`는 오른쪽 값을 왼쪽에 **대입**',
@@ -655,6 +662,20 @@ print(s)`, answer: 'koreajapan2002', explain: '괄호로 묶은 문자열들은 
 print(s[___:___])`, options: ['2', '5', '1', '4', '6'], answer: ['2', '5'], explain: 't는 2번, o는 4번. 끝 번호는 포함하지 않으니 4 + 1 = 5를 써요.' },
         { type: 'output', code: `s = "python programming"
 print(s.count("m"))`, answer: '2', explain: 'programming에 m이 2개 있어요.' },
+        { type: 'output', code: `s = "python programming"
+print(s[3:])`, answer: 'hon programming', explain: '3번(h)부터 끝까지.' },
+        { type: 'output', code: `s = "python programming"
+print(s[2:-2])`, answer: 'thon programmi', explain: '2번부터 뒤에서 2번째(-2) 직전까지. 끝의 n, g가 빠져요.' },
+        { type: 'output', code: `s = "python programming"
+print(s.index("n", 6))`, answer: '16', explain: '6번 위치부터 찾기 시작하니 앞의 n(5번)은 건너뛰고 16번을 찾아요.' },
+        { type: 'output', code: `s = "python programming"
+print("x" not in s)`, answer: 'True', explain: 'x가 없으니 "없다"는 말이 참.' },
+        { type: 'mc', q: '출력 결과는?', out: true, code: `print("[" + "  hi  ".lstrip() + "]")`, choices: ['`[hi  ]`', '`[  hi]`', '`[hi]`', '`[  hi  ]`'], answer: 0, explain: 'lstrip은 왼쪽 공백만 제거. 오른쪽 공백은 남아요.' },
+        { type: 'mc', q: '`rstrip()`이 제거하는 공백은?', choices: ['오른쪽 공백', '왼쪽 공백', '양쪽 공백', '가운데 공백'], answer: 0, explain: 'l = left(왼쪽), r = right(오른쪽), strip은 양쪽.' },
+        { type: 'mc', q: '출력 결과는?', out: true, code: `s = "python programming"
+print(s.split())`, choices: ["`['python', 'programming']`", "`['python programming']`", '`python programming`', "`('python', 'programming')`"], answer: 0, explain: '인수 없는 split()은 공백을 기준으로 잘라 리스트로 돌려줘요.' },
+        { type: 'mc', q: '출력 결과는?', out: true, code: `s = "python programming"
+print(s.split("pro"))`, choices: ["`['python ', 'gramming']`", "`['python', 'gramming']`", "`['python ', 'pro', 'gramming']`", "`['gramming']`"], answer: 0, explain: '"pro"를 기준으로 자르고 "pro" 자체는 사라져요. 앞부분의 공백은 남아요.' },
       ],
       summary: [
         '문자열 = 문자를 **따옴표로 감싸** 나열 · 큰/작은따옴표 모두 가능하지만 **섞어 쓸 수 없음**',
@@ -797,6 +818,8 @@ print(a)`, answer: '14', explain: '10 - 3 = 7, 7 × 2 = 14' },
 s2 = "만세"
 print(s1 + s2)`, answer: '대한민국만세', explain: '문자열 + 문자열 = 연결 (사이에 공백 없음)' },
         { type: 'blank', q: '`korea2002`가 출력되도록 빈칸을 채우세요.', code: `print("korea" + ___(2002))`, options: ['str', 'int', 'float', 'print'], answer: ['str'], explain: '숫자 2002를 문자열 "2002"로 바꿔야 연결할 수 있어요.' },
+        { type: 'mc', q: '대입 연산자 `=`에 대한 설명으로 옳은 것은?', choices: ['`변수 = 수식` 형태로, 오른쪽을 계산해 왼쪽 변수에 저장한다', '양쪽 값이 같은지 비교한다', '변수의 타입을 미리 정해야 쓸 수 있다', '왼쪽 값을 오른쪽 변수에 넣는다'], answer: 0, explain: '대입되는 값에 따라 변수 타입이 결정돼요. 비교는 ==.' },
+        { type: 'output', code: `print(10 + float("314e-2"))`, answer: '13.14', explain: '"314e-2" = 314 × 10⁻² = 3.14 → 10 + 3.14' },
       ],
       summary: [
         '`변수 = 수식`: 오른쪽을 계산해서 왼쪽에 대입, 값에 따라 타입 결정',
@@ -1187,6 +1210,14 @@ print(cnt)`, answer: '8', explain: '2, 3, …, 9 → 8번 반복 (10은 미포�
         continue
     print(s, end=" ")`, answer: '92 86 68 56', explain: '120만 continue로 건너뛰고 나머지는 같은 줄에 출력.' },
         { type: 'match', pairs: [['`break`', '루프를 완전히 끝냄'], ['`continue`', '이번 반복만 건너뜀'], ['`while`', '조건이 참인 동안 반복'], ['`for`', '컬렉션 요소를 하나씩 꺼내며 반복']], explain: '반복문 4총사예요.' },
+        { type: 'output', code: `dan = 2
+while dan <= 3:
+    hang = 2
+    while hang <= 3:
+        print(dan * hang, end=" ")
+        hang += 1
+    dan += 1`, answer: '4 6 6 9', explain: 'while 이중 루프는 바깥 루프 안에서 hang = 2로 매번 다시 초기화해야 해요. 2×2, 2×3, 3×2, 3×3.' },
+        { type: 'mc', q: '범위의 원칙에 따르면, 일상생활의 "11~20" 구간을 컴퓨터에서는 어떻게 나타낼까요?', choices: ['10~20 (20은 제외)', '11~20 (20 포함)', '11~21 (21 포함)', '10~19 (19 포함)'], answer: 0, explain: '범위의 원칙: 끝 요소는 제외하고 직전까지만 포함. 그래서 구간이 0~10, 10~20, 20~30처럼 깔끔하게 이어져요.' },
       ],
       summary: [
         '`while 조건:` 조건이 참인 동안 반복 · 조건을 바꾸는 문장이 없으면 **무한 루프**',
